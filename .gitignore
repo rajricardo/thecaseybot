@@ -1,0 +1,36 @@
+# Secrets — real Discord token, Anthropic key, channel/user IDs. Copy
+# config.example.yaml to config.yaml and fill in your own values.
+config.yaml
+
+# Contains a live Discord token pasted in plaintext — never commit.
+Notes.md
+
+# Private third-party Discord content (Casey's actual trade messages) and
+# derived eval artifacts — not part of the bot's source, not needed to run it.
+Team2Trading.txt
+trim_conditions.txt
+trim_eval_report.csv
+trim_eval_run.log
+
+# Unrelated scratch file, not part of this project.
+DESIGN-mintlify.md
+
+# Runtime artifacts
+casey_bot.log
+*.log
+casey_bridge.db*
+*.db
+*.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+*.egg-info/
+
+# Test scripts
+test_*.py
+
+# OS
+.DS_Store

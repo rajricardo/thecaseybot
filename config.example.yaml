@@ -1,0 +1,51 @@
+# Copy this file to config.yaml and fill in real values.
+# config.yaml is Phase-1/2/3 shared — Phase 1 only reads the `discord` and
+# `bot` sections below; `risk` and `ibkr` are read starting Phase 2.
+
+discord:
+  # Your personal account's session token (self-bot mode), not a Developer
+  # Portal bot token — see discord_listener.py docstring for how this works
+  # and the ToS/account-risk tradeoff. Guard this file like a password.
+  user_token: "PUT_YOUR_DISCORD_ACCOUNT_TOKEN_HERE"
+  channel_id: 0            # the Team2Trading channel's numeric ID
+  casey_user_id: 0         # only messages from this author are treated as signals
+
+bot:
+  log_file: "casey_bot.log"
+
+# used by llm_trim_evaluator.py (offline TRIM/NOISE eval) and by the live
+# TRIM/ADD/NOISE routing in llm_classifier.py for messages the regex
+# classifier can't confidently place
+llm:
+  api_key: "PUT_YOUR_ANTHROPIC_API_KEY_HERE"
+  model: "claude-haiku-4-5-20251001"   # cheap/fast — fine for this triage-style classification
+
+# --- read starting Phase 2 (IBKR paper/live wiring) ---
+risk:
+  allowed_tickers: ["SPY", "QQQ", "IWM", "TSLA", "AMD", "AAPL", "NVDA", "MSFT", "AMZN"]
+  sizing_mode: "fixed"      # fixed | dynamic
+  max_contracts_per_trade: 5    # used when sizing_mode is fixed
+  capital_per_trade: 500        # used when sizing_mode is dynamic: qty = floor(capital_per_trade / (LAST price * 100))
+  max_concurrent_positions: 3
+  max_daily_losing_trades: 3
+  daily_loss_limit: null    # dollar amount, null disables the check
+  strike_offset: "1ITM"     # <rank>ITM|<rank>OTM, e.g. 1ITM, 2OTM — no ATM, use 1OTM for closest-to-money
+  expiry_selection: "nearest"  # nearest (0DTE if available) | weeklies (next Friday)
+  price_type: "MIDPOINT"    # MARKET|MIDPOINT|BID|ASK|LAST|AUTO (AUTO = MIDPOINT before 9:45am ET, MARKET from 9:45am ET on)
+  require_confirmation: true
+  trim_pct: 50              # % of the CURRENTLY HELD quantity sold on every TRIM signal (applied fresh each time, not against the original entry size)
+  auto_submit_stop_loss: true  # after a TRIM, protect the remaining runners with a stop at avg entry price
+  add_pct: 10                # % of the CURRENTLY HELD quantity bought on every ADD signal (e.g. 10 held, add_pct=10 -> buy 1 more)
+
+ibkr:
+  host: "127.0.0.1"
+  port: 4001                # 4001 = paper TWS/Gateway, 4002 = live Gateway, 7497/7496 = TWS
+  client_id: 1
+
+# what to do with a signal that arrived while IBKR was disconnected (wifi
+# drop, TWS/Gateway restart, etc.), once the connection comes back
+reconnect:
+  retry_on_reconnect: true  # true = place it once reconnected; false = discard it
+  retry_timeout_mins: 5      # discard if reconnecting took longer than this, measured
+                             # from when the signal arrived (not from when IBKR dropped);
+                             # null/omit = no timeout, always retry however long it takes

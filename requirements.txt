@@ -1,0 +1,9 @@
+# discord.py-self and discord.py both install as the `discord` module and
+# cannot coexist in the same environment - this project uses the self-bot
+# fork since it logs in with a personal account token, not a bot token.
+discord.py-self>=2.0
+pyyaml>=6.0
+ib_async
+anthropic>=0.40
+flask>=3.0
+ruamel.yaml>=0.18   # round-trip YAML — web/server.py's Settings screen writes config.yaml without destroying its comments
