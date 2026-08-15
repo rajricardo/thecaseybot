@@ -24,25 +24,35 @@ Reads Casey's Discord, places IBKR options orders accordingly
 ```bash
 git clone https://github.com/rajricardo/thecaseybot.git
 cd thecaseybot
-cp config.example.yaml config.yaml
 ```
 
-Fill in `config.yaml`:
+**macOS/Linux:**
+
+```bash
+./install.sh   # creates venv, installs dependencies, scaffolds config.yaml
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\install.ps1
+```
+
+If PowerShell blocks the script with an execution-policy error, run it as
+`powershell -ExecutionPolicy Bypass -File .\install.ps1` instead, or once per
+session: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
+
+Either script copies `config.example.yaml` to `config.yaml` if it doesn't
+already exist. Fill it in:
 - `discord.*` — see [Getting your Discord token](#getting-your-discord-token)
 - `llm.api_key` — your Anthropic API key
 - `ibkr.*` — see [IBKR TWS/Gateway API setup](#ibkr-twsgateway-api-setup)
 - `risk.*` — see the [config reference](#risk-config-reference) below; also
   editable live from the Settings screen once running
 
-Run it:
-
-```bash
-./run.sh
-```
-
-(creates the venv, installs dependencies, and starts the bot — or do it by hand
-with `python3 -m venv venv && venv/bin/pip install -r requirements.txt &&
-venv/bin/python bot.py`.) Then open `http://127.0.0.1:8787`.
+Then run it — macOS/Linux: `./run.sh`, Windows: `.\run.ps1`. Both just launch
+the bot (run the install script first if `venv` or `config.yaml` isn't there
+yet). Then open `http://127.0.0.1:8787`.
 
 **Start with `risk.require_confirmation: true`** — signals get logged but no
 order is ever submitted. Flip it to `false` only once you've watched it behave

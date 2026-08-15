@@ -12,37 +12,18 @@ pkill -f "$DIR/bot.py" 2>/dev/null
 sleep 1
 pkill -9 -f "$DIR/bot.py" 2>/dev/null
 
-# Check if the virtual environment exists, create if missing
+# Setup (venv + dependencies) lives in install.sh now, not here — run that
+# first if either of these is missing.
 if [ ! -d "$DIR/venv" ]; then
-    echo "Virtual environment (venv) not found. Creating it..."
-    python3 -m venv "$DIR/venv"
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to create virtual environment using python3 -m venv."
-        exit 1
-    fi
-fi
-
-# Check if dependencies are installed, install requirements if missing
-if ! "$DIR/venv/bin/python" -c "import discord, yaml, ib_async, anthropic, flask, ruamel.yaml" &> /dev/null; then
-    echo "Dependencies missing. Installing requirements from requirements.txt..."
-    if [ -f "$DIR/requirements.txt" ]; then
-        "$DIR/venv/bin/pip" install --upgrade pip
-        "$DIR/venv/bin/pip" install -r "$DIR/requirements.txt"
-        if [ $? -ne 0 ]; then
-            echo "Error: Failed to install requirements."
-            exit 1
-        fi
-    else
-        echo "Error: requirements.txt not found. Cannot install dependencies."
-        exit 1
-    fi
+    echo "Error: venv not found. Run ./install.sh first."
+    exit 1
 fi
 
 # config.yaml holds real secrets (Discord token, IBKR settings) and is
 # gitignored/untracked on purpose — fail early with a clear message rather
 # than letting bot.py crash on a missing key deep in main().
 if [ ! -f "$DIR/config.yaml" ]; then
-    echo "Error: config.yaml not found. Copy config.example.yaml to config.yaml and fill in real values first."
+    echo "Error: config.yaml not found. Run ./install.sh first, then fill in real values."
     exit 1
 fi
 
