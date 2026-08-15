@@ -35,15 +35,71 @@ cp config.example.yaml config.yaml
 
 Edit `config.yaml`:
 
-- `discord.user_token` — your Discord account's session token
+- `discord.user_token` — your Discord account's session token (see
+  [Getting your Discord token](#getting-your-discord-token) below)
 - `discord.channel_id` / `discord.casey_user_id` — the channel to watch and the
   numeric ID of the author whose messages count as signals
 - `llm.api_key` — your Anthropic API key
 - `ibkr.host` / `ibkr.port` / `ibkr.client_id` — where TWS/Gateway is listening
-  (4001 = paper Gateway, 4002 = live Gateway, 7497/7496 = TWS)
+  (4001 = paper Gateway, 4002 = live Gateway, 7497/7496 = TWS) — see
+  [IBKR TWS/Gateway API setup](#ibkr-twsgateway-api-setup) below
 - `risk.*` — see below; everything here is also editable live from the Settings
   screen once the bot is running, no restart needed (Discord/IBKR/LLM settings
   do need a restart)
+
+### Getting your Discord token
+
+`discord.user_token` is your own Discord account's session token, not a
+Developer Portal bot token — this is self-bot mode (see `discord_listener.py`'s
+docstring for the mechanics and the ToS/account-risk tradeoff of automating a
+personal account). To grab it:
+
+1. Open Discord in a desktop browser (not the desktop app) and log in.
+2. Open DevTools (`Cmd+Option+I` on macOS, `F12`/`Ctrl+Shift+I` on
+   Windows/Linux) and switch to the **Network** tab.
+3. Click into any server/channel in Discord's UI so a new request fires, then
+   filter the Network tab for `api` and click one of the requests to
+   `discord.com/api/...`.
+4. In that request's **Headers**, find `authorization:` under Request Headers
+   — the value is your token. Copy it exactly (no `Bearer ` prefix) into
+   `discord.user_token`.
+5. Also grab `discord.channel_id` (right-click the channel → Copy Channel ID)
+   and `discord.casey_user_id` (right-click the author's name → Copy User ID)
+   — both require Discord's Developer Mode enabled (User Settings → Advanced
+   → Developer Mode) to see the "Copy ID" option.
+
+Treat this token exactly like a password: anyone with it can act as your
+Discord account. Never commit it (`config.yaml` is gitignored for this
+reason) and never paste it into a notes file that might end up somewhere else.
+
+### IBKR TWS/Gateway API setup
+
+The bot connects to TWS or IB Gateway over its local API socket, so that has
+to be turned on and unattended-friendly before `bot.py` can place orders:
+
+1. Open TWS or IB Gateway and log in (paper account recommended to start —
+   [IB Gateway](https://www.interactivebrokers.com/en/trading/ibgateway-stable.php)
+   is the lighter-weight headless option if you don't need the full TWS UI).
+2. Go to **File → Global Configuration → API → Settings** (TWS) or
+   **Configure → Settings → API → Settings** (Gateway).
+3. Check **Enable ActiveX and Socket Clients**.
+4. Set the **Socket port** to match `ibkr.port` in `config.yaml` (4001 for
+   paper Gateway, 4002 for live Gateway, 7497/7496 for paper/live TWS).
+5. **Uncheck "Read-Only API"** — this must be off, or every order the bot
+   submits gets silently rejected by TWS/Gateway itself.
+6. Add `127.0.0.1` under **Trusted IP Addresses** (or check "Allow connections
+   from localhost only" if that's all you need) so the bot's own machine can
+   connect without an approval popup per session.
+7. Check **"Bypass Order Precautions for API Orders"** in the same API
+   settings page. Without this, TWS pops up a confirmation dialog for things
+   like a large order size or a price far from the market — dialogs nobody's
+   there to click through when the bot is running unattended, so the order
+   just hangs. This is the "safety check" toggle — bypassing it here still
+   leaves `risk.require_confirmation` in `config.yaml` as the bot's own
+   pre-submission gate.
+8. Make sure `ibkr.client_id` in `config.yaml` isn't already in use by
+   another API connection (TWS itself, another script, a second run of this
+   bot) — two connections sharing a client ID will fight each other.
 
 Then either run `./run.sh` (creates the venv, installs `requirements.txt`, and starts
 the bot for you), or do it by hand:
