@@ -15,6 +15,10 @@ trim_eval_run.log
 # Unrelated scratch file, not part of this project.
 DESIGN-mintlify.md
 
+# Source workbook for README screenshots — not needed to run the bot;
+# the extracted images live in images/setup/ instead.
+CasetyBOT_InitialSetup.xlsx
+
 # Runtime artifacts
 casey_bot.log
 *.log
