@@ -17,8 +17,7 @@ Reads Casey's Discord, places IBKR options orders accordingly
   paper account recommended to start
 - A Discord personal account token (self-bot mode — see
   [Getting your Discord token](#getting-your-discord-token))
-- A [Claude API key](https://platform.claude.com/settings/workspaces/default/keys)
-  (see [Getting your Claude API key](#getting-your-claude-api-key))
+- An [Anthropic API key](https://console.anthropic.com/)
 
 ## Setup
 
@@ -46,7 +45,7 @@ session: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`.
 Either script copies `config.example.yaml` to `config.yaml` if it doesn't
 already exist. Fill it in:
 - `discord.*` — see [Getting your Discord token](#getting-your-discord-token)
-- `llm.api_key` — your Claude API key, see [Getting your Claude API key](#getting-your-claude-api-key)
+- `llm.api_key` — your Anthropic API key
 - `ibkr.*` — see [IBKR TWS/Gateway API setup](#ibkr-twsgateway-api-setup)
 - `risk.*` — see the [config reference](#risk-config-reference) below; also
   editable live from the Settings screen once running
@@ -54,9 +53,6 @@ already exist. Fill it in:
 Then run it — macOS/Linux: `./run.sh`, Windows: `.\run.ps1`. Both just launch
 the bot (run the install script first if `venv` or `config.yaml` isn't there
 yet). Then open `http://127.0.0.1:8787`.
-
-![Running the bot](images/setup/run-bot-terminal.png)
-![Casey Bridge overview](images/setup/casey-bridge-overview.png)
 
 **Start with `risk.require_confirmation: true`** — signals get logged but no
 order is ever submitted. Flip it to `false` only once you've watched it behave
@@ -66,32 +62,16 @@ correctly against a paper account.
 
 1. In Discord, enable **Developer Mode**: User Settings → Advanced → Developer
    Mode. This unlocks a "Copy ID" option when you right-click things.
-2. Right-click the channel to watch (e.g. `#my-trades`) → **Copy Channel ID**
-   → `discord.channel_id`.
-
-   ![Copy Channel ID](images/setup/discord-copy-channel-id.png)
-3. Right-click Casey's name/avatar → **Copy User ID** → `discord.casey_user_id`.
-
-   ![Copy User ID](images/setup/discord-copy-user-id.png)
-4. For the token: open Discord.com in a browser, open any chat window, open
-   DevTools (`Cmd+Option+I` / `F12`) → **Network** tab → **Headers**, click
-   into any channel so a request fires, open any request to
-   `discord.com/api/...`, and copy the `authorization` value from its request
-   headers → `discord.user_token`.
-
-   ![Discord auth token in Network tab](images/setup/discord-token-network-tab.png)
+2. Right-click the channel to watch → **Copy Channel ID** → `discord.channel_id`.
+   Right-click Casey's name → **Copy User ID** → `discord.casey_user_id`.
+3. For the token: open Discord in a browser, open DevTools
+   (`Cmd+Option+I` / `F12`) → **Network** tab, click into any channel so a
+   request fires, open any request to `discord.com/api/...`, and copy the
+   `authorization` value from its request headers → `discord.user_token`.
 
 This is your own account's session token, not a bot token — automating a
 personal account is against Discord's ToS and risks the account. Treat the
 token like a password: never commit it, never paste it into a notes file.
-
-### Getting your Claude API key
-
-Generate a new key at
-[platform.claude.com/settings/workspaces/default/keys](https://platform.claude.com/settings/workspaces/default/keys)
-and save it as `llm.api_key` in `config.yaml`.
-
-![Claude Console API keys](images/setup/claude-api-keys.png)
 
 ### IBKR TWS/Gateway API setup
 
@@ -103,21 +83,13 @@ and save it as `llm.api_key` in `config.yaml`.
      7497/7496 paper/live TWS)
    - **Uncheck "Read-Only API"** — otherwise every order gets silently rejected
    - Add `127.0.0.1` to **Trusted IP Addresses**
-
-     ![IBKR API Settings](images/setup/ibkr-api-settings.png)
    - Check **"Bypass Order Precautions for API Orders"** — without this, TWS
      pops up a confirmation dialog with nobody there to click it, and the
      order just hangs. `risk.require_confirmation` in `config.yaml` is the
      bot's own separate gate, unaffected by this.
-
-     ![IBKR API Precautions](images/setup/ibkr-api-precautions.png)
 3. Make sure `ibkr.client_id` isn't already used by another connection.
 
 ## `risk` config reference
-
-All of these are also editable live from the Settings screen:
-
-![Casey Bridge Settings](images/setup/casey-bridge-settings.png)
 
 | Key | Meaning |
 |---|---|
