@@ -34,3 +34,6 @@ test_*.py
 
 # OS
 .DS_Store
+
+# Claude Code local settings (per-machine tool permissions)
+.claude/settings.local.json
