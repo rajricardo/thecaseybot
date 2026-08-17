@@ -1,5 +1,5 @@
 # thecaseybot
-Reads Casey's Discord, places IBKR options orders accordingly
+Reads a trader's Discord signals, places IBKR options orders accordingly
 
 ## What it does
 
@@ -7,8 +7,8 @@ Reads Casey's Discord, places IBKR options orders accordingly
   as ENTRY / EXIT / TRIM / ADD / NOISE (regex first, Claude as fallback for
   anything ambiguous).
 - Turns a classified signal into a risk-gated Interactive Brokers options order.
-- Serves a local control UI, **Casey Bridge**, at `http://127.0.0.1:8787` — live
-  positions, signal feed, order history, and a Settings screen.
+- Serves a local control UI at `http://127.0.0.1:8787` — live positions, signal
+  feed, order history, and a Settings screen.
 
 ## Requirements
 
@@ -63,7 +63,8 @@ correctly against a paper account.
 1. In Discord, enable **Developer Mode**: User Settings → Advanced → Developer
    Mode. This unlocks a "Copy ID" option when you right-click things.
 2. Right-click the channel to watch → **Copy Channel ID** → `discord.channel_id`.
-   Right-click Casey's name → **Copy User ID** → `discord.casey_user_id`.
+   Right-click the signal author's name → **Copy User ID** →
+   `discord.casey_user_id` (the account whose messages count as signals).
 3. For the token: open Discord in a browser, open DevTools
    (`Cmd+Option+I` / `F12`) → **Network** tab, click into any channel so a
    request fires, open any request to `discord.com/api/...`, and copy the
@@ -117,4 +118,4 @@ disconnected, once the connection comes back — see the comments in
 - This bot places real brokerage orders. Test against an IBKR **paper** account
   with `require_confirmation: true` before ever pointing it at a live account.
 - `config.yaml` holds real secrets and is gitignored — never commit it.
-- The Casey Bridge web UI binds to `127.0.0.1` only.
+- The web UI binds to `127.0.0.1` only.
