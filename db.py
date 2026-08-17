@@ -148,6 +148,22 @@ def get_recent_signals(limit=200):
         return [dict(r) for r in rows]
 
 
+def get_recent_raw_texts(limit=5):
+    """The last `limit` messages' raw_text, oldest first — threaded into
+    llm_classifier.classify() as ticker-disambiguation context (e.g. "adding
+    back my 774p here" right after a message naming SPY). Called before the
+    current message is logged (see bot.py's on_message_text), so this never
+    includes the message currently being classified. Every classified
+    message ends up in this table regardless of type (NOISE included), so
+    this naturally captures plain commentary that named a ticker too."""
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT raw_text FROM signals WHERE raw_text IS NOT NULL AND raw_text != '' "
+            "ORDER BY ts DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [r["raw_text"] for r in reversed(rows)]
+
+
 # ── orders ───────────────────────────────────────────────────────────────
 
 def insert_order(signal_id, source, action, ticker, contract_label, qty, price_type,

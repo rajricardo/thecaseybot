@@ -21,6 +21,21 @@ Fails safe: any error, timeout, or malformed response falls back to NOISE
 rather than risking an unintended order from a degraded classification —
 symmetric with signal_classifier's own "not confident -> don't guess"
 stance on ENTRY.
+
+classify() optionally takes recent_messages — the last few prior messages
+from the same channel/author (db.get_recent_raw_texts, threaded in by
+bot.py), given as ticker-disambiguation context only. Real trader phrasing
+often drops the ticker on a follow-up message that's obviously about
+whatever's already being discussed ("adding back my 774p here" right after
+a message naming SPY) — without that context the model has nothing to
+resolve `ticker` from but the strike number itself, which it was doing by
+loose association with which ticker "usually" trades near that price
+rather than anything actually said in the channel, and getting it wrong
+that way is worse than leaving `ticker` blank: _resolve_target_position in
+trade_executor.py falls back to "the one open position" when `ticker` is
+empty, so a correct blank beats a confident wrong guess. Context messages
+never change which message gets classified or what action label it gets —
+only `text` is judged for that; see SYSTEM_PROMPT's ticker paragraph.
 """
 
 import logging
@@ -46,7 +61,9 @@ The single most common error here is conditional/future intent — a plan for wh
   - "Thinking of" / "planning to" / "want to see X" / "looking to" hedging: "thinking of adding those back", "want to see the 13ema hold and I will add some more".
 Contrast with the real, present-tense action that should get EXIT/TRIM/ADD: no if/when/once clause, no "looking to"/"thinking of" hedging — the trader states what they're doing right now, e.g. "I'm gonna sell the rest of spy here", "adding here @ .42", "selling half here".
 
-If a ticker is named or clearly implied (SPY/QQQ/IWM/TSLA/AMD/AAPL/NVDA/MSFT/AMZN/META/GOOGL/NFLX/GLD/MAGS/SLV, or a company name), put its uppercase symbol in `ticker`; otherwise leave it an empty string. Judge only the message given. Be decisive — pick the single best label even for terse, informal phrasing ("Locking in more", "Out half", "Adding here", "Selling the rest" are all real trade actions, not noise, even without a ticker attached)."""
+Ticker: if the message being classified itself names a ticker or company (SPY/QQQ/IWM/TSLA/AMD/AAPL/NVDA/MSFT/AMZN/META/GOOGL/NFLX/GLD/MAGS/SLV, or a company name), put its uppercase symbol in `ticker`. If it names none and prior channel messages are given below as context, use the ticker/company most recently named there instead, unless a later context message clearly switched to a different one. Never infer a ticker from a strike price, dollar amount, or any other bare number — e.g. "774p" alone is NOT evidence of any specific ticker, no matter how characteristic that price looks for one; that's a guess, not something actually said. A wrong guess is worse than an empty string here, since downstream order logic falls back to whatever position is actually open when `ticker` is blank. If no ticker is named anywhere — this message or the context — leave `ticker` an empty string.
+
+The context messages (if given) are for ticker resolution ONLY. Judge the EXIT/TRIM/ADD/NOISE label from the message being classified alone, never from the context messages' own content. Be decisive — pick the single best label even for terse, informal phrasing ("Locking in more", "Out half", "Adding here", "Selling the rest" are all real trade actions, not noise, even without a ticker attached)."""
 
 ROUTE_TOOL = {
     "name": "route_signal",
@@ -62,10 +79,33 @@ ROUTE_TOOL = {
 }
 
 
-async def classify(text, client, model):
-    """text: the raw (mention-unstripped is fine) Discord message.
-    client: an anthropic.AsyncAnthropic instance, created once at startup.
-    Returns a Signal — never raises."""
+def _build_user_content(text, recent_messages):
+    """Pulled out as its own function so the prompt-construction logic is
+    unit-testable without a live API key (classify() itself needs one).
+    recent_messages: prior raw messages, oldest first, NOT including text
+    itself — see classify()'s docstring and SYSTEM_PROMPT's ticker
+    paragraph for why these exist and how they're scoped (ticker
+    disambiguation only, never the action label)."""
+    if not recent_messages:
+        return text
+    context_block = "\n".join(f"- {m}" for m in recent_messages)
+    return (
+        "Recent prior channel messages, oldest first (context for ticker "
+        "resolution only — see the ticker paragraph in your instructions; "
+        "this is NOT the message to classify):\n"
+        f"{context_block}\n\n"
+        "Message to classify:\n"
+        f"{text}"
+    )
+
+
+async def classify(text, client, model, recent_messages=None):
+    """text: the raw (mention-unstripped is fine) Discord message to
+    classify — this is always the message judged for EXIT/TRIM/ADD/NOISE.
+    recent_messages: optional list of prior raw messages (oldest first,
+    not including text) for ticker disambiguation — see this module's
+    docstring. client: an anthropic.AsyncAnthropic instance, created once
+    at startup. Returns a Signal — never raises."""
     try:
         resp = await client.messages.create(
             model=model,
@@ -73,7 +113,7 @@ async def classify(text, client, model):
             system=SYSTEM_PROMPT,
             tools=[ROUTE_TOOL],
             tool_choice={"type": "tool", "name": "route_signal"},
-            messages=[{"role": "user", "content": text}],
+            messages=[{"role": "user", "content": _build_user_content(text, recent_messages)}],
             timeout=REQUEST_TIMEOUT_SECS,
         )
     except Exception as e:

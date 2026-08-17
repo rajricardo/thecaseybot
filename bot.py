@@ -85,7 +85,13 @@ def main():
         signal = classify(text)
         if signal is None:
             stage = "claude"
-            signal = await llm_classifier.classify(text, llm_client, llm_model)
+            # Fetched before this message is logged below, so it never
+            # includes the message being classified right now — see
+            # llm_classifier.classify()'s docstring for why this is passed
+            # (ticker disambiguation only, e.g. "adding back my 774p here"
+            # right after a message naming SPY).
+            recent = db.get_recent_raw_texts(limit=5)
+            signal = await llm_classifier.classify(text, llm_client, llm_model, recent_messages=recent)
             db.increment_counter("claude_call_count")
 
         blocked_reason = None
