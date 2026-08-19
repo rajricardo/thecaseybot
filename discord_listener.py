@@ -20,6 +20,8 @@ client's connection fingerprint; running a plain discord.py Client with a
 user token will get rejected outright.
 """
 
+import logging
+
 import discord
 
 
@@ -29,6 +31,16 @@ def run(user_token, channel_id, casey_user_id, on_message_text, on_connected=Non
     keep them fast) the caller can use to observe connection health without
     this module needing to know anything about how that's tracked (bot.py
     wires them to db.py's bot_state for the web UI's health indicator)."""
+    # discord.http has exactly two INFO-level log calls in the whole module
+    # (the user-agent and TLS-fingerprint-target echoes printed once per
+    # connect) — everything else it logs (rate limits, Cloudflare throttling,
+    # retries) is WARNING or higher, so raising just this child logger's
+    # level is a complete fix with no risk of silencing a real rate-limit
+    # warning. Must be set before client.run() below, since that calls
+    # discord.utils.setup_logging() internally, which sets the parent
+    # "discord" logger's level/handler but never touches this child's level.
+    logging.getLogger("discord.http").setLevel(logging.WARNING)
+
     client = discord.Client()
 
     @client.event
