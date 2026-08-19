@@ -11,6 +11,19 @@ import db
 from signal_classifier import SignalType
 
 
+class _QuietPortfolioUpdates(logging.Filter):
+    """Drops ib_async.wrapper's updatePortfolio/position callback dumps —
+    these fire repeatedly on every portfolio tick while any position is
+    open and carry no actionable information (just a full contract/position
+    object echoed back). Every other ib_async.* line — orderStatus,
+    execDetails, commissionReport, error/warning — is left alone; those are
+    exactly the ones build_logger's ib_async routing exists to preserve."""
+
+    def filter(self, record):
+        msg = record.getMessage()
+        return not (msg.startswith("updatePortfolio:") or msg.startswith("position:"))
+
+
 def build_logger(log_file):
     logger = logging.getLogger("casey_bot")
     logger.setLevel(logging.INFO)
@@ -38,6 +51,7 @@ def build_logger(log_file):
     ib_logger = logging.getLogger("ib_async")
     ib_logger.setLevel(logging.INFO)
     ib_logger.handlers.clear()
+    ib_logger.addFilter(_QuietPortfolioUpdates())
     ib_logger.addHandler(file_handler)
     ib_logger.addHandler(console_handler)
 
