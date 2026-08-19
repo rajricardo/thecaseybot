@@ -12,12 +12,20 @@ from signal_classifier import SignalType
 
 
 class _QuietPortfolioUpdates(logging.Filter):
-    """Drops ib_async.wrapper's updatePortfolio/position callback dumps —
-    these fire repeatedly on every portfolio tick while any position is
-    open and carry no actionable information (just a full contract/position
-    object echoed back). Every other ib_async.* line — orderStatus,
-    execDetails, commissionReport, error/warning — is left alone; those are
-    exactly the ones build_logger's ib_async routing exists to preserve.
+    """Drops ib_async.wrapper's updatePortfolio/position/commissionReport/
+    execDetails callback dumps — these fire repeatedly on every portfolio
+    tick or fill and carry no actionable information beyond what's already
+    visible in our own ENTRY/EXIT/TRIM/ADD outcome lines and ibkr_client.py's
+    own "[ibkr_client] Order status: ... -> Filled" line (populated from its
+    own event subscription, independent of these). commissionReport's
+    realized-P&L data still reaches ibkr_client.py's daily risk tracking
+    regardless of this filter — that's wired through ib.commissionReportEvent
+    (see ibkr_client.py's track_daily_pnl); execDetails likewise still fires
+    self.ib.execDetailsEvent/trade.fillEvent — all separate subscriptions
+    from this logging call, so silencing these lines doesn't drop any
+    functional data, only the console/file echo of it. orderStatus and
+    error/warning are left alone; those are exactly the ones build_logger's
+    ib_async routing exists to preserve.
 
     Attached to the handlers, not to the "ib_async" logger itself: these
     messages are actually logged via the "ib_async.wrapper" child logger
@@ -28,11 +36,13 @@ class _QuietPortfolioUpdates(logging.Filter):
     record that reaches them regardless of which child logger it came from,
     so that's where this has to live to actually take effect."""
 
+    _SILENCED_PREFIXES = ("updatePortfolio:", "position:", "commissionReport:", "execDetails")
+
     def filter(self, record):
         if record.name != "ib_async.wrapper":
             return True
         msg = record.getMessage()
-        return not (msg.startswith("updatePortfolio:") or msg.startswith("position:"))
+        return not msg.startswith(self._SILENCED_PREFIXES)
 
 
 def build_logger(log_file):
