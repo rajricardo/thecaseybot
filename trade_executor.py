@@ -266,6 +266,7 @@ def handle_entry(ib, signal, risk_cfg, logger):
         db.update_signal_outcome(signal.db_id, msg, contract_label, failed=True)
         return None
 
+    logger.info(f"[trade_executor] Ready to fire, Dracarys... BUY x{qty} {contract_label}")
     trade = ibkr_client.place_order(ib, contract, "BUY", qty, price_type, tkr=tkr)
     outcome = f"ENTRY placed: BUY x{qty} {contract_label} ibkr_order_id={trade.order.orderId}"
     logger.info(outcome)
@@ -361,6 +362,7 @@ def handle_exit(ib, signal, risk_cfg, logger):
         logger.info(f"Cancelled {cancelled} protective stop order(s) for {contract_label} "
                     f"before full exit")
 
+    logger.info(f"[trade_executor] Ready to fire, Dracarys... SELL x{qty} {contract_label}")
     trade = ibkr_client.place_order(ib, contract, "SELL", qty, price_type)
     outcome = f"EXIT placed: SELL x{qty} {contract_label} ibkr_order_id={trade.order.orderId}"
     logger.info(outcome)
@@ -421,6 +423,7 @@ def handle_trim(ib, signal, risk_cfg, logger):
         logger.info(f"Cancelled {cancelled} existing protective stop order(s) for "
                     f"{contract_label} before this trim")
 
+    logger.info(f"[trade_executor] Ready to fire, Dracarys... SELL x{qty} {contract_label}")
     trade = ibkr_client.place_order(ib, contract, "SELL", qty, price_type)
     outcome = (f"TRIM placed: SELL x{qty} (of {held_qty} held, {pct}%) {contract_label} "
                f"ibkr_order_id={trade.order.orderId}")
@@ -509,6 +512,7 @@ def handle_add(ib, signal, risk_cfg, logger):
         logger.info(f"Cancelled {cancelled} existing protective stop order(s) for "
                     f"{contract_label} before this add")
 
+    logger.info(f"[trade_executor] Ready to fire, Dracarys... BUY x{qty} {contract_label}")
     trade = ibkr_client.place_order(ib, contract, "BUY", qty, price_type)
     outcome = (f"ADD placed: BUY x{qty} (of {held_qty} held, {pct}%) {contract_label} "
                f"ibkr_order_id={trade.order.orderId}")
