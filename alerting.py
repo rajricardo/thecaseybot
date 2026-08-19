@@ -17,9 +17,20 @@ class _QuietPortfolioUpdates(logging.Filter):
     open and carry no actionable information (just a full contract/position
     object echoed back). Every other ib_async.* line — orderStatus,
     execDetails, commissionReport, error/warning — is left alone; those are
-    exactly the ones build_logger's ib_async routing exists to preserve."""
+    exactly the ones build_logger's ib_async routing exists to preserve.
+
+    Attached to the handlers, not to the "ib_async" logger itself: these
+    messages are actually logged via the "ib_async.wrapper" child logger
+    (see ib_async/wrapper.py's self._logger), and a Filter added via
+    Logger.addFilter() only runs for records logged directly on that same
+    logger object — it's never consulted for records a child logger
+    propagates up through callHandlers(). Handlers, by contrast, see every
+    record that reaches them regardless of which child logger it came from,
+    so that's where this has to live to actually take effect."""
 
     def filter(self, record):
+        if record.name != "ib_async.wrapper":
+            return True
         msg = record.getMessage()
         return not (msg.startswith("updatePortfolio:") or msg.startswith("position:"))
 
@@ -30,13 +41,16 @@ def build_logger(log_file):
     logger.handlers.clear()
 
     formatter = logging.Formatter("%(asctime)s [%(name)s] %(message)s")
+    quiet_portfolio_updates = _QuietPortfolioUpdates()
 
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
+    file_handler.addFilter(quiet_portfolio_updates)
     logger.addHandler(file_handler)
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+    console_handler.addFilter(quiet_portfolio_updates)
     logger.addHandler(console_handler)
 
     # ib_async logs every order status change, fill, and IBKR API
@@ -51,7 +65,6 @@ def build_logger(log_file):
     ib_logger = logging.getLogger("ib_async")
     ib_logger.setLevel(logging.INFO)
     ib_logger.handlers.clear()
-    ib_logger.addFilter(_QuietPortfolioUpdates())
     ib_logger.addHandler(file_handler)
     ib_logger.addHandler(console_handler)
 
