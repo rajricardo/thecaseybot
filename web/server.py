@@ -76,12 +76,26 @@ _HEARTBEAT_PHRASES = [
 
 class _QuietStatePolls(logging.Filter):
     """Drops werkzeug's default access-log line for GET /api/state (the
-    dashboard's poll endpoint) so it doesn't fight with the heartbeat print
-    below for the same line of console real estate. Every other
-    request/response — including errors — still logs normally."""
+    dashboard's poll endpoint, silenced in favor of the throttled heartbeat
+    print below) and for the three static requests a page reload fires
+    (index.html via "/", styles.css, app.js) — all routine, non-actionable
+    traffic. Matched on the quoted "METHOD path HTTP" request line, not a
+    bare path substring, so this can't accidentally swallow an unrelated
+    route that merely contains one of these paths (e.g. /api/state vs some
+    future /api/statefoo). Every other request/response — including
+    errors, and every POST (settings/mode/pause/positions/tickers actions)
+    — still logs normally."""
+
+    _SILENCED_REQUEST_LINES = (
+        '"GET /api/state HTTP',
+        '"GET / HTTP',
+        '"GET /styles.css HTTP',
+        '"GET /app.js HTTP',
+    )
 
     def filter(self, record):
-        return "/api/state" not in record.getMessage()
+        msg = record.getMessage()
+        return not any(line in msg for line in self._SILENCED_REQUEST_LINES)
 
 
 class TickerValidationRequest:
